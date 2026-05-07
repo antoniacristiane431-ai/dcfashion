@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>DC Fashion</title>
+
+<style>
+body { margin:0; font-family: Arial; background:#fafafa; }
+header { background:#000; color:white; text-align:center; padding:20px; }
+.banner { background:#ff4da6; color:white; text-align:center; padding:10px; font-weight:bold; }
+nav { background:white; padding:15px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+nav a { margin:10px; text-decoration:none; color:#333; font-weight:bold; }
+nav a:hover { color:#ff4da6; }
+.container { padding:30px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; }
+.card { background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1); transition:0.3s; }
+.card:hover { transform:scale(1.03); }
+.card img { width:100%; height:250px; object-fit:cover; }
+.card h3, .card p { margin:10px; }
+button { margin:10px; padding:10px; border:none; background:#ff4da6; color:white; border-radius:8px; cursor:pointer; width:90%; }
+.carrinho { position:fixed; right:0; top:0; width:280px; height:100%; background:white; box-shadow:-3px 0 10px rgba(0,0,0,0.2); padding:15px; overflow-y:auto; }
+.categorias { text-align:center; margin-bottom:20px; }
+.categorias button { width:auto; margin:5px; }
+.modal { display:none; position:fixed; z-index:1; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.4); }
+.modal-content { background-color:#fefefe; margin:10% auto; padding:20px; border:1px solid #888; width:80%; max-width:500px; }
+.close { color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer; }
+.close:hover { color:black; }
+</style>
+
+</head>
+<body>
+
+<header>
+<h1>DC Fashion</h1>
+<p>Moda feminina elegante</p>
+</header>
+
+<div class="banner">🔥 10% OFF na primeira compra!</div>
+
+<nav>
+<a href="#">Início</a>
+<a href="#produtos">Produtos</a>
+<a href="#cadastro">Cadastro</a>
+</nav>
+
+<div class="container">
+
+<h2>Categorias</h2>
+<div class="categorias">
+<button onclick="filtrar('todos')">Todos</button>
+<button onclick="filtrar('blusa')">Blusas</button>
+<button onclick="filtrar('blazer')">Blazer</button>
+<button onclick="filtrar('calca')">Calças</button>
+<button onclick="filtrar('jeans')">Jeans</button>
+<button onclick="filtrar('camisa')">Camisas</button>
+<button onclick="filtrar('colete')">Colete</button>
+<button onclick="filtrar('regata')">Regata</button>
+<button onclick="filtrar('vestido')">Vestidos</button>
+</div>
+
+<h2 id="produtos">Produtos</h2>
+<div id="lista" class="grid"></div>
+
+<h2 id="cadastro">Cadastro</h2>
+<input id="nome" placeholder="Nome"><br><br>
+<input id="email" placeholder="Email"><br><br>
+<button onclick="abrirModal()">Cadastrar e Comprar</button>
+
+</div>
+
+<!-- Modal de Cadastro/Compra -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="fecharModal()">&times;</span>
+    <h2>Finalizar Compra</h2>
+    <p>Nome: <span id="modal-nome"></span></p>
+    <p>Email: <span id="modal-email"></span></p>
+    <p id="modal-itens"></p>
+    <p><strong>Total: R$ <span id="modal-total">0</span></strong></p>
+    <button onclick="finalizarCompra()">Confirmar Compra</button>
+  </div>
+</div>
+
+<div class="carrinho">
+<h2>Carrinho 🛒</h2>
+<ul id="carrinho"></ul>
+<p>Total: R$ <span id="total">0</span></p>
+<button onclick="abrirModal()">Finalizar</button>
+</div>
+
+<script>
+let produtos = [];
+let carrinho = [];
+let clienteId = null;
+
+// Carregar produtos do MySQL
+async function carregarProdutos(categoria = 'todos') {
+  try {
+    const url = categoria === 'todos' 
+      ? 'api.php?acao=listar_produtos' 
+      : `api.php?acao=listar_produtos&categoria=${categoria}`;
+    
+    const resposta = await fetch(url);
+    produtos = await resposta.json();
+    render(produtos);
+  } catch (erro) {
+    console.error('Erro ao carregar produtos:', erro);
+    alert('Erro ao carregar produtos do banco de dados');
+  }
+}
+
+function render(lista) {
+  let div = document.getElementById("lista");
+  div.innerHTML = "";
+  lista.forEach(p => {
+    div.innerHTML += `
+      <div class="card">
+        ${p.iframe ? p.iframe : `<img src="${p.img}">`}
+        <h3>${p.nome}</h3>
+        <p>R$ ${parseFloat(p.preco).toFixed(2)}</p>
+        <button onclick="add(${p.id}, '${p.nome}', ${p.preco})">Comprar</button>
+      </div>`;
+  });
+}
+
+function filtrar(cat) {
+  carregarProdutos(cat);
+}
+
+function add(id, nome, preco) {
+  const item = carrinho.find(x => x.id === id);
+  if (item) {
+    item.quantidade++;
+  } else {
+    carrinho.push({ id, nome, preco, quantidade: 1 });
+  }
+  atualizar();
+}
+
+function atualizar() {
+  let lista = document.getElementById("carrinho");
+  let total = 0;
+  lista.innerHTML = "";
+  carrinho.forEach(p => {
+    total += p.preco * p.quantidade;
+    lista.innerHTML += `<li>${p.nome} x${p.quantidade} (R$ ${(p.preco * p.quantidade).toFixed(2)}) 
+      <button onclick="remover(${p.id})" style="width:30px; padding:5px;">X</button></li>`;
+  });
+  document.getElementById("total").innerText = total.toFixed(2);
+}
+
+function remover(id) {
+  carrinho = carrinho.filter(x => x.id !== id);
+  atualizar();
+}
+
+function abrirModal() {
+  const nome = document.getElementById('nome').value;
+  const email = document.getElementById('email').value;
+  
+  if (!nome || !email) {
+    alert('Preencha nome e email!');
+    return;
+  }
+  
+  if (carrinho.length === 0) {
+    alert('Carrinho vazio!');
+    return;
+  }
+  
+  document.getElementById('modal-nome').innerText = nome;
+  document.getElementById('modal-email').innerText = email;
+  
+  const itens = carrinho.map(p => `${p.nome} x${p.quantidade}`).join('<br>');
+  document.getElementById('modal-itens').innerHTML = `<strong>Itens:</strong><br>${itens}`;
+  
+  const total = carrinho.reduce((sum, p) => sum + (p.preco * p.quantidade), 0);
+  document.getElementById('modal-total').innerText = total.toFixed(2);
+  
+  document.getElementById('modal').style.display = 'block';
+}
+
+function fecharModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+async function finalizarCompra() {
+  const nome = document.getElementById('nome').value;
+  const email = document.getElementById('email').value;
+  
+  try {
+    // 1. Cadastrar cliente
+    const formData1 = new FormData();
+    formData1.append('nome', nome);
+    formData1.append('email', email);
+    
+    const resposta1 = await fetch('api.php?acao=cadastrar_cliente', {
+      method: 'POST',
+      body: formData1
+    });
+    const resultado1 = await resposta1.json();
+    
+    if (resultado1.erro) {
+      alert('Erro ao cadastrar: ' + resultado1.erro);
+      return;
+    }
+    
+    clienteId = resultado1.id;
+    
+    // 2. Criar pedido
+    const total = carrinho.reduce((sum, p) => sum + (p.preco * p.quantidade), 0);
+    const formData2 = new FormData();
+    formData2.append('cliente_id', clienteId);
+    formData2.append('itens', JSON.stringify(carrinho));
+    formData2.append('total', total);
+    
+    const resposta2 = await fetch('api.php?acao=criar_pedido', {
+      method: 'POST',
+      body: formData2
+    });
+    const resultado2 = await resposta2.json();
+    
+    if (resultado2.erro) {
+      alert('Erro ao criar pedido: ' + resultado2.erro);
+      return;
+    }
+    
+    alert(`Compra realizada com sucesso! Pedido #${resultado2.pedido_id}\n10% OFF 🎉`);
+    carrinho = [];
+    document.getElementById('nome').value = '';
+    document.getElementById('email').value = '';
+    atualizar();
+    fecharModal();
+    
+  } catch (erro) {
+    console.error('Erro:', erro);
+    alert('Erro ao processar compra');
+  }
+}
+
+window.onclick = function(event) {
+  const modal = document.getElementById('modal');
+  if (event.target === modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Carregar produtos ao iniciar
+carregarProdutos();
+</script>
+
+</body>
+</html>

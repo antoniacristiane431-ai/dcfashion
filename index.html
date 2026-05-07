@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>DC Fashion</title>
+
+<style>
+body { margin:0; font-family: Arial; background:#fafafa; }
+header { background:#000; color:white; text-align:center; padding:20px; }
+.banner { background:#ff4da6; color:white; text-align:center; padding:10px; font-weight:bold; }
+nav { background:white; padding:15px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+nav a { margin:10px; text-decoration:none; color:#333; font-weight:bold; }
+nav a:hover { color:#ff4da6; }
+.container { padding:30px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; }
+.card { background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1); transition:0.3s; }
+.card:hover { transform:scale(1.03); }
+.card img { width:100%; height:250px; object-fit:cover; }
+.card h3, .card p { margin:10px; }
+button { margin:10px; padding:10px; border:none; background:#ff4da6; color:white; border-radius:8px; cursor:pointer; width:90%; }
+.carrinho { position:fixed; right:0; top:0; width:280px; height:100%; background:white; box-shadow:-3px 0 10px rgba(0,0,0,0.2); padding:15px; }
+.categorias { text-align:center; margin-bottom:20px; }
+.categorias button { width:auto; margin:5px; }
+</style>
+
+</head>
+<body>
+
+<header>
+<h1>DC Fashion</h1>
+<p>Moda feminina elegante</p>
+</header>
+
+<div class="banner">🔥 10% OFF na primeira compra!</div>
+
+<nav>
+<a href="#">Início</a>
+<a href="#produtos">Produtos</a>
+<a href="#cadastro">Cadastro</a>
+</nav>
+
+<div class="container">
+
+<h2>Categorias</h2>
+<div class="categorias">
+<button onclick="filtrar('todos')">Todos</button>
+<button onclick="filtrar('blusas')">Blusas</button>
+<button onclick="filtrar('blazer')">Blazer</button>
+<button onclick="filtrar('calças')">Calças</button>
+<button onclick="filtrar('jeans')">Jeans</button>
+<button onclick="filtrar('coletes')">Coletes</button>
+<button onclick="filtrar('conjuntos')">Conjuntos</button>
+</div>
+
+<h2 id="produtos">Produtos</h2>
+<div id="lista" class="grid"></div>
+
+<h2 id="cadastro">Cadastro</h2>
+<input id="nome" placeholder="Nome"><br><br>
+<input id="email" placeholder="Email"><br><br>
+<button onclick="cadastrar()">Cadastrar</button>
+
+</div>
+
+<div class="carrinho">
+<h2>Carrinho 🛒</h2>
+<ul id="carrinho"></ul>
+<p>Total: R$ <span id="total">0</span></p>
+<button onclick="comprar()">Finalizar</button>
+</div>
+
+<script>
+let produtos = [
+ {id:1,nome:"Blusa Elegante",categoria:"blusas",preco:80,img:"https://images.unsplash.com/photo-1490481651871-ab68de25d43d", sizes:["P","M","G","GG"], colors:["Preto","Branco","Rosa"]},
+ {id:2,nome:"Blazer Feminino",categoria:"blazer",preco:150,img:"https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb", sizes:["P","M","G","GG"], colors:["Preto","Azul","Cinza"]},
+ {id:3,nome:"Calça Social",categoria:"calças",preco:120,img:"https://images.unsplash.com/photo-1584464491033-06628f3a6b7b", sizes:["P","M","G","GG"], colors:["Preto","Bege","Azul"]},
+ {id:4,nome:"Calça Jeans",categoria:"jeans",preco:110,img:"https://images.unsplash.com/photo-1521335629791-ce4aec67dd47", sizes:["P","M","G","GG"], colors:["Azul Escuro","Azul Claro","Preto"]},
+ {id:5,nome:"Colete Moderno",categoria:"coletes",preco:95,img:"https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb", sizes:["P","M","G","GG"], colors:["Preto","Marrom","Verde"]},
+ {id:6,nome:"Conjunto Blusa e Calça",categoria:"conjuntos",preco:200,img:"https://images.unsplash.com/photo-1445205170230-053b83016050", sizes:["P","M","G","GG"], colors:["Preto","Branco","Rosa"]},
+ {id:7,nome:"Conjunto Jeans e Blusa",categoria:"conjuntos",preco:180,img:"https://images.unsplash.com/photo-1441986300917-64674bd600d8", sizes:["P","M","G","GG"], colors:["Azul","Preto","Branco"]},
+ {id:8,nome:"Blusa Casual",categoria:"blusas",preco:70,img:"https://images.unsplash.com/photo-1483985988355-763728e1935b", sizes:["P","M","G","GG"], colors:["Branco","Azul","Vermelho"]},
+ {id:9,nome:"Calça Legging",categoria:"calças",preco:90,img:"https://images.unsplash.com/photo-1506629905607-0b5b8b5e4b8f", sizes:["P","M","G","GG"], colors:["Preto","Cinza","Rosa"]},
+ {id:10,nome:"Blazer Clássico",categoria:"blazer",preco:160,img:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d", sizes:["P","M","G","GG"], colors:["Preto","Navy","Cinza"]}
+];
+
+let carrinho=[];
+
+function render(lista){
+ let div=document.getElementById("lista");
+ div.innerHTML="";
+ lista.forEach(p=>{
+  div.innerHTML+=`
+  <div class="card">
+    <img src="${p.img}">
+    <h3>${p.nome}</h3>
+    <p>R$ ${p.preco}</p>
+    <select id="size-${p.id}">
+      ${p.sizes.map(s=>`<option value="${s}">${s}</option>`).join('')}
+    </select>
+    <select id="color-${p.id}">
+      ${p.colors.map(c=>`<option value="${c}">${c}</option>`).join('')}
+    </select>
+    <button onclick="add(${p.id})">Comprar</button>
+  </div>`;
+ });
+}
+
+function filtrar(cat){
+ if(cat==='todos') render(produtos);
+ else render(produtos.filter(p=>p.categoria===cat));
+}
+
+function add(id){
+ let p=produtos.find(x=>x.id==id);
+ let size = document.getElementById(`size-${id}`).value;
+ let color = document.getElementById(`color-${id}`).value;
+ carrinho.push({ ...p, size, color });
+ atualizar();
+}
+
+function atualizar(){
+ let lista=document.getElementById("carrinho");
+ let total=0;
+ lista.innerHTML="";
+ carrinho.forEach(p=>{
+  total+=p.preco;
+  lista.innerHTML+=`<li>${p.nome} - Tamanho: ${p.size} - Cor: ${p.color}</li>`;
+ });
+ document.getElementById("total").innerText=total;
+}
+
+function comprar(){
+ if(carrinho.length===0) return alert("Carrinho vazio!");
+ alert("Compra realizada!");
+ carrinho=[];
+ atualizar();
+}
+
+function cadastrar(){
+ alert("Cadastro feito! 10% OFF 🎉");
+}
+
+render(produtos);
+</script>
+
+</body>
+</html>
